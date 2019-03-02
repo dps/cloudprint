@@ -37,7 +37,8 @@ import tempfile
 import time
 import uuid
 
-from cloudprint import xmpp
+import xmpp
+from fake_cups import FakeCupsConnection
 
 
 XMPP_SERVER_HOST = 'talk.google.com'
@@ -399,8 +400,10 @@ def process_job(cups_connection, cpp, printer, job):
     global num_retries
 
     try:
+        print(job)
         pdf = cpp.auth.session.get(job['fileUrl'], stream=True)
         tmp = tempfile.NamedTemporaryFile(delete=False)
+        print(tmp.name)
         shutil.copyfileobj(pdf.raw, tmp)
         tmp.flush()
 
@@ -410,16 +413,17 @@ def process_job(cups_connection, cpp, printer, job):
 
         options = dict((str(k), str(v)) for k, v in list(options.items()))
         options['job-originating-user-name'] = job['ownerId']
+        print(options)
 
         # Cap the title length to 255, or cups will complain about invalid
         # job-name
-        cups_connection.printFile(
-            printer.name,
-            tmp.name,
-            job['title'][:255],
-            options,
-        )
-        os.unlink(tmp.name)
+        # cups_connection.printFile(
+        #     printer.name,
+        #     tmp.name,
+        #     job['title'][:255],
+        #     options,
+        # )
+        #os.unlink(tmp.name)
         LOGGER.info(unicode_escape('SUCCESS ' + job['title']))
 
         cpp.finish_job(job['id'])
@@ -587,7 +591,7 @@ def main():
         LOGGER.info('logged out')
         return
 
-    cups_connection = cups.Connection()
+    cups_connection = FakeCupsConnection() #cups.Connection()
     cpp = CloudPrintProxy(auth)
 
     cpp.sleeptime = POLL_PERIOD
